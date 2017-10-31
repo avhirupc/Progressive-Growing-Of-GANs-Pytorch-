@@ -25,15 +25,15 @@ class Generator(nn.Module):
             model=nn.Sequential(*layers_list)
         return model
 
-    def init_layers(least_dimension,max_dimension,dimension_step_ratio):
+    def init_layers(least_dimension,max_dimension,dimension_step_ratio,input_dim):
         l_of_layer=[]
-        i_dim=2
+        output_dim=input_dim*dimension_step_ratio
         while True:
-            if calculate_deconv_output_dimension(input_dim)<= max_dimension:
-                
+            if output_dim<= max_dimension:
                 k_size=calculate_deconv_kernel_size(input_dim,dimension_step_ratio)
                 l_of_layer.append(deconv(c_in,c_out,k_size))
                 input_dim=input_dim*dimension_step_ratio
+                output_dim=input_dim*dimension_step_ratio
             else:
                 break
         return l_of_layer
