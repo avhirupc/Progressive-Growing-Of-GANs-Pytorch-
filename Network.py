@@ -12,8 +12,8 @@ class Generator(nn.Module):
         self.dimension_step_ratio = dimension_step_ratio
         self.max_dimension = max_dimension
         self.smoothing_steps= smoothing_steps
-        self.init_layers(least_dimension,max_dimension,dimension_step_ratio)
-        self.model=self.make_model(self.init_layers,smoothing_steps)
+        self.layer_list=self.init_layers(least_dimension,max_dimension,dimension_step_ratio)
+        self.model=self.make_model(self.layer_list,smoothing_steps)
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion=#define criteria for loss
     
@@ -54,7 +54,9 @@ class Discriminator(nn.Module):
         self.dimension_step_ratio = dimension_step_ratio
         self.max_dimension = max_dimension
         self.smoothing_steps= smoothing_steps
-
+        self.layer_list=self.init_layers(least_dimension,max_dimension,dimension_step_ratio)
+        self.model=self.make_model(self.layer_list,smoothing_steps)
+        
     def make_model(layers_list,smoothing_steps):
         model=None
         if smoothing_steps:
@@ -65,20 +67,21 @@ class Discriminator(nn.Module):
 
     def init_layers(least_dimension,max_dimension,dimension_step_ratio,input_dim):
         l_of_layer=[]
-        c_in=1
+        c_in=4
         c_out=2
         output_dim=input_dim*dimension_step_ratio
         while True:
-            if output_dim<= max_dimension:
+            if output_dim>= least_dimension:
                 k_size=calculate_conv_kernel_size(input_dim,dimension_step_ratio)
                 l_of_layer.append(conv(c_in,c_out,k_size))
                 input_dim=input_dim*dimension_step_ratio
                 output_dim=input_dim*dimension_step_ratio
                 c_in=c_out
-                c_out=c_in*2
+                c_out=int(c_in*0.5)
             else:
                 break
         return l_of_layer
+
 
 
     def forward():
