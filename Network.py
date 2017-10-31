@@ -27,6 +27,8 @@ class Generator(nn.Module):
 
     def init_layers(least_dimension,max_dimension,dimension_step_ratio,input_dim):
         l_of_layer=[]
+        c_in=1
+        c_out=2
         output_dim=input_dim*dimension_step_ratio
         while True:
             if output_dim<= max_dimension:
@@ -34,6 +36,8 @@ class Generator(nn.Module):
                 l_of_layer.append(deconv(c_in,c_out,k_size))
                 input_dim=input_dim*dimension_step_ratio
                 output_dim=input_dim*dimension_step_ratio
+                c_in=c_out
+                c_out=c_in*2
             else:
                 break
         return l_of_layer
@@ -51,11 +55,32 @@ class Discriminator(nn.Module):
         self.max_dimension = max_dimension
         self.smoothing_steps= smoothing_steps
 
-    def make_model():
-        pass
+    def make_model(layers_list,smoothing_steps):
+        model=None
+        if smoothing_steps:
+            pass
+        else:
+            model=nn.Sequential(*layers_list)
+        return model
 
-    def init_layers(least_dimension,max_dimension,dimension_step_ratio):
-        #list of layers
+    def init_layers(least_dimension,max_dimension,dimension_step_ratio,input_dim):
+        l_of_layer=[]
+        c_in=1
+        c_out=2
+        output_dim=input_dim*dimension_step_ratio
+        while True:
+            if output_dim<= max_dimension:
+                k_size=calculate_conv_kernel_size(input_dim,dimension_step_ratio)
+                l_of_layer.append(conv(c_in,c_out,k_size))
+                input_dim=input_dim*dimension_step_ratio
+                output_dim=input_dim*dimension_step_ratio
+                c_in=c_out
+                c_out=c_in*2
+            else:
+                break
+        return l_of_layer
+
+
     def forward():
         pass
 
