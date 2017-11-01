@@ -11,7 +11,7 @@ def deconv(c_in, c_out, k_size, stride=1, pad=0, bn=True):
     layers.append(nn.ReLU())
     return nn.Sequential(*layers)
 
-def conv(c_in, c_out, k_size, stride=2, pad=1, bn=True):
+def conv(c_in, c_out, k_size, stride=1, pad=0, bn=True):
     """Custom convolutional layer for simplicity."""
     layers = []
     layers.append(nn.Conv2d(c_in, c_out, k_size, stride, pad))
