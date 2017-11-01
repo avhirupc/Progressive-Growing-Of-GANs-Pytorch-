@@ -32,3 +32,15 @@ def calculate_conv_kernel_size(input_dim,dimension_step_ratio,stride=1,pad=0):
 
 def calculate_deconv_kernel_size(input_dim,dimension_step_ratio,stride=1,pad=0):
     return int(2*pad+(input_dim*dimension_step_ratio)-stride*(input_dim-1))
+
+
+def sum(input, axes, keepdim=False):
+    # probably some check for uniqueness of axes
+    if keepdim:
+        for ax in axes:
+            input = input.sum(ax, keepdim=True)
+    else:
+        for ax in sorted(axes, reverse=True):
+            input = input.sum(ax)
+    return input
+

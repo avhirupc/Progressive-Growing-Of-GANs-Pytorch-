@@ -19,13 +19,11 @@ class Generator(nn.Module):
         self.layer_list=self.init_layers(self.least_size,self.curr_max_size,self.size_step_ratio)
         self.model=self.make_model(self.layer_list)
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
-    
-    def make_model(self,layers_list,smoothing_steps=None):
-        model=None
-        if smoothing_steps:
-            pass
-        else:
-            model=nn.Sequential(*layers_list)
+        self.smoothing_factor=0.2
+        self.will_be_next_layers=None
+
+    def make_model(self,layers_list):
+        model=nn.Sequential(*layers_list)
         return model
 
     def init_layers(self,least_size,curr_max_size,size_step_ratio):
@@ -41,27 +39,47 @@ class Generator(nn.Module):
                 self.c_out=self.c_in*2
             else:
                 break
-        # self.output_dim=self.input_dim//size_step_ratio
-        # self.input_dim=self.output_dim//size_step_ratio
         return l_of_layer
 
-    def add_layer(self):
-        if self.output_dim<=self.max_size:
-            k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio) 
-            self.layer_list.append(deconv(self.c_in,self.c_out,k_size))
-            self.input_dim=self.input_dim*self.size_step_ratio
-            self.output_dim=self.input_dim*self.size_step_ratio
-            self.c_in=self.c_out
-            self.c_out=self.c_in*2
+    def add_layer(self,with_smoothing=False):
+        if not with_smoothing:
+            if self.output_dim<=self.max_size:
+                k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio) 
+                self.layer_list.append(deconv(self.c_in,self.c_out,k_size))
+                self.input_dim=self.input_dim*self.size_step_ratio
+                self.output_dim=self.input_dim*self.size_step_ratio
+                self.c_in=self.c_out
+                self.c_out=self.c_in*2
+            else:
+                print ("MAX SIZE REACHED")
+            self.model=self.make_model(self.layer_list)
         else:
-            print ("MAX SIZE REACHED")
-        self.model=self.make_model(self.layer_list)
+            if self.will_be_next_layers==None:
+                print ("Smoothing branch not present, kindly call add_smoothing_branch")
+                return
+            self.model=self.make_model(self.will_be_next_layers)
+            self.will_be_next_layers=None
 
     def add_smoothing_branch(self):
-        pass
+        if self.output_dim<=self.max_size:
+            k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio)
+            self.will_be_next_layers=self.layer_list+[deconv(self.c_in,self.c_out,k_size)]
+        else:
+            print ("MAX SIZE REACHED")
+            
 
-    def forward(self,input):
-        return self.model(input)
+    def forward(self,input,with_smoothing=False):
+        if with_smoothing:
+            if self.will_be_next_layers==None:
+                print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
+            A=F.upsample((1-self.smoothing_factor)*self.model(input),scale_factor=self.size_step_ratio)
+            B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
+            A=sum(A,[0,1],keepdim=True)
+            B=sum(B,[0,1],keepdim=True)
+            return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
+        else:
+            A=sum(self.model(input),[0,1],keepdim=True)
+            return A
         
 class Discriminator(nn.Module):
     """docstring for Discriminator"""
@@ -114,10 +132,6 @@ class Discriminator(nn.Module):
         else:
             print ("Least SIZE REACHED")
         self.model=self.make_model(self.layer_list)
-
-
-
-
 
     def forward(self,input):
         return self.model(input)
