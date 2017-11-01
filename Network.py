@@ -136,7 +136,6 @@ class Discriminator(nn.Module):
 
 
     def add_smoothing_branch(self):
-        print (self.input_dim,self.max_size,self.output_dim,self.c_in,self.c_out)
         if self.input_dim<=self.max_size:
             k_size=calculate_conv_kernel_size(self.input_dim,self.size_step_ratio)
             self.will_be_next_layers=[conv(self.c_in,self.c_out,k_size)]+self.layer_list
@@ -148,9 +147,15 @@ class Discriminator(nn.Module):
         if with_smoothing:
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
-            k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
-            A=(1-self.smoothing_factor)*self.model(input)
-            A=F.avg_pool2d(A,k_size,stride=1)
+            print (self.input_dim,self.output_dim)
+            print (input.size())
+            # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
+            k_size=2
+            avg_pool=nn.AvgPool2d(2,stride=0)
+            A=avg_pool(input)
+            # A=F.avg_pool2d(input,k_size,stride=0)
+            print (A.size())
+            A=(1-self.smoothing_factor)*self.model(A)
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
             print (A.size())
             A=sum(A,[0,1],keepdim=True)
