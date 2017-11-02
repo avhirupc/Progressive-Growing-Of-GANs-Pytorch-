@@ -57,7 +57,12 @@ class Generator(nn.Module):
             if self.will_be_next_layers==None:
                 print ("Smoothing branch not present, kindly call add_smoothing_branch")
                 return
+            self.input_dim=self.input_dim*self.size_step_ratio
+            self.output_dim=self.input_dim*self.size_step_ratio            
+            self.c_in=self.c_out
+            self.c_out=self.c_in*2
             self.model=self.make_model(self.will_be_next_layers)
+            self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None
 
     def add_smoothing_branch(self):
@@ -92,8 +97,8 @@ class Discriminator(nn.Module):
         self.curr_least_size=int(self.input_dim*self.size_step_ratio)
         self.output_dim=int(self.input_dim*self.size_step_ratio)
         self.least_size=self.least_size
-        self.c_in=input_shape[1]
-        self.c_out=input_shape[1]//2
+        self.c_in=2
+        self.c_out=1
         self.layer_list=self.init_layers()
         self.model=self.make_model(self.layer_list)
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -132,13 +137,19 @@ class Discriminator(nn.Module):
                 print ("Smoothing branch not present, kindly call add_smoothing_branch")
                 return
             self.model=self.make_model(self.will_be_next_layers)
-            self.will_be_next_layers=None   
+            self.layer_list=self.will_be_next_layers
+            self.will_be_next_layers=None 
+            self.output_dim=self.input_dim
+            self.input_dim=int(self.output_dim*(1/self.size_step_ratio))
+
 
 
     def add_smoothing_branch(self):
         if self.input_dim<=self.max_size:
             k_size=calculate_conv_kernel_size(self.input_dim,self.size_step_ratio)
             self.will_be_next_layers=[conv(self.c_in,self.c_out,k_size)]+self.layer_list
+            self.c_out=self.c_in
+            self.c_in=self.c_out*2
         else:
             print ("MAX SIZE REACHED")
 
@@ -149,6 +160,9 @@ class Discriminator(nn.Module):
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
             print (self.input_dim,self.output_dim)
             print (input.size())
+            #change forward thingy . repeat wagera tensor
+
+
             # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
             k_size=2
             avg_pool=nn.AvgPool2d(2,stride=0)
@@ -162,7 +176,7 @@ class Discriminator(nn.Module):
             B=sum(B,[0,1],keepdim=True)
             return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
         else:
-            A=sum(self.model(input),[0,1],keepdim=True)
+            A=self.model(input)
             return A
 
 class PGGAN(object):
