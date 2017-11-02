@@ -34,7 +34,7 @@ class Generator(nn.Module):
             if self.output_dim<= curr_max_size:
                 k_size=calculate_deconv_kernel_size(self.input_dim,size_step_ratio)
                 l_of_layer.append(deconv(self.c_in,self.c_out,k_size))
-                self.input_dim=self.input_dim*size_step_ratio
+                self.input_dim=self.output_dim
                 self.output_dim=self.input_dim*size_step_ratio
                 self.c_in=self.c_out
                 self.c_out=self.c_in*2
@@ -78,6 +78,7 @@ class Generator(nn.Module):
         if with_smoothing:
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
+                return
             A=F.upsample((1-self.smoothing_factor)*self.model(input),scale_factor=self.size_step_ratio)
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
             A=sum(A,[0,1],keepdim=True)
@@ -159,6 +160,7 @@ class Discriminator(nn.Module):
         if with_smoothing:
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
+                return
             input1=input.data.numpy()
             input_to_supply=np.tile(input1,(1,self.c_out,1,1))
             # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
