@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils import *
-
+import numpy as np
+from torch.autograd import Variable
 class Generator(nn.Module):
     """docstring for Generator"""
     
@@ -88,12 +89,12 @@ class Generator(nn.Module):
         
 class Discriminator(nn.Module):
     """docstring for Discriminator"""
-    def __init__(self,least_size,max_size,size_step_ratio,input_shape,learning_rate=0.1):
+    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1):
         super(Discriminator, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
         self.max_size = max_size
-        self.input_dim=input_shape[2]
+        self.input_dim=4
         self.curr_least_size=int(self.input_dim*self.size_step_ratio)
         self.output_dim=int(self.input_dim*self.size_step_ratio)
         self.least_size=self.least_size
@@ -158,25 +159,25 @@ class Discriminator(nn.Module):
         if with_smoothing:
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
-            print (self.input_dim,self.output_dim)
-            print (input.size())
-            #change forward thingy . repeat wagera tensor
-
-
+            input1=input.data.numpy()
+            input_to_supply=np.tile(input1,(1,self.c_out,1,1))
             # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
             k_size=2
             avg_pool=nn.AvgPool2d(2,stride=0)
             A=avg_pool(input)
-            # A=F.avg_pool2d(input,k_size,stride=0)
-            print (A.size())
-            A=(1-self.smoothing_factor)*self.model(A)
-            B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
+            A1=A.data.numpy()
+            A_to_supply=np.tile(A1,(1,int(self.c_out/2),1,1))            
+            A=(1-self.smoothing_factor)*self.model(Variable(torch.Tensor(A_to_supply)))
+            B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(Variable(torch.Tensor(input_to_supply)))
             print (A.size())
             A=sum(A,[0,1],keepdim=True)
             B=sum(B,[0,1],keepdim=True)
             return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
         else:
-            A=self.model(input)
+            input1=input.data.numpy()
+            input_to_supply=np.tile(input1,(1,self.c_out,1,1))
+            print (input_to_supply.shape)
+            A=self.model(Variable(torch.Tensor(input_to_supply)))
             return A
 
 class PGGAN(object):

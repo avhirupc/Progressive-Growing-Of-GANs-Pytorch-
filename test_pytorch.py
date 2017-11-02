@@ -9,33 +9,29 @@ import torch.nn.functional as F
 # x.unsqueeze_(0)
 # print (x.size())
 # y=Variable(x)
+x=np.random.rand(1,2,2)
+x=torch.Tensor(x)
+x.unsqueeze_(0)
+y=Variable(x)
 
-# from Network import Generator,Discriminator
-# g=Generator(2,16,2)
-# for i in range(2):
-#     g.add_smoothing_branch()
-#     g.add_layer(with_smoothing=True)
-#     # print (g)
+from Network import Generator,Discriminator
+g=Generator(2,16,2)
+for i in range(3):
+    g.add_smoothing_branch()
+    g.add_layer(with_smoothing=True)
+    # print (g)
+print ("Generator SIze",g(y).size())
 
+print (g)
 
-# x=np.random.rand(2,4,4)
-# x=torch.Tensor(x)
-# x.unsqueeze_(0)
-# print (x.size())
-# y=Variable(x)
+# avg_pool=nn.AvgPool2d(2,stride=0)
+# print (avg_pool(y))
 
-# # avg_pool=nn.AvgPool2d(2,stride=0)
-# # print (avg_pool(y))
-
-# d=Discriminator(2,16,0.5,y.size())
-# # print (d)
-# for i in range(2):
-#     d.add_smoothing_branch()
-#     d.add_layer(with_smoothing=True)
+d=Discriminator(2,16,0.5)
 # print (d)
-# print (d.c_in,d.c_out,d.input_dim,d.output_dim)
-A = torch.randn(8,8)
-A.unsqueeze_(0)
-A.unsqueeze_(0)
-print (A.size())
-print (A.repeat(5,8,8).size())
+for i in range(3):
+    d.add_smoothing_branch()
+    d.add_layer(with_smoothing=True)
+
+
+print (d(g(y)))
