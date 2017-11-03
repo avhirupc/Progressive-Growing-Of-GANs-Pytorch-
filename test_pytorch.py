@@ -29,27 +29,25 @@ import torch.nn.functional as F
 # d.add_smoothing_branch()
 # print (d(g(y,with_smoothing=True),with_smoothing=True))
 
-from Network import Generator,Discriminator
-g=Generator(2,16,2)
-for i in range(1):
-    g.add_smoothing_branch()
-    g.add_layer(with_smoothing=True)
-print (g)
-g.add_smoothing_branch()
+from Network import Generator,Discriminator,PGGAN
+# g=Generator(2,16,2)
+# for i in range(1):
+#     g.add_smoothing_branch()
+#     g.add_layer(with_smoothing=True)
+# g.add_smoothing_branch()
 
-d=Discriminator(2,16,0.5)
-for i in range(1):
-    d.add_smoothing_branch()
-    d.add_layer(with_smoothing=True)
-d.add_smoothing_branch()
+# d=Discriminator(2,16,0.5)
+# for i in range(1):
+#     d.add_smoothing_branch()
+#     d.add_layer(with_smoothing=True)
+# d.add_smoothing_branch()
 
-print( d)
-for i,j in zip(g.data_loader,d.data_loader):
-    print (g(Variable(i),with_smoothing=True).size())
-    print("##########################################")
-    print (d(g(Variable(i),with_smoothing=True),with_smoothing=True).size())
-    print("##########################################")
-    break
+# for i,j in zip(g.data_loader,d.data_loader):
+#     print (g(Variable(i),with_smoothing=True).size())
+#     print("##########################################")
+#     print (d(g(Variable(i),with_smoothing=True),with_smoothing=True).size())
+#     print("##########################################")
+#     break
 
 
 # print (d(g(y)))
@@ -66,3 +64,5 @@ from utils import *
 # batch_size = 100
 # learning_rate = 0.001
 
+pggan=PGGAN()
+pggan.train()

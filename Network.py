@@ -79,11 +79,13 @@ class Generator(nn.Module):
             self.model=self.make_model(self.will_be_next_layers)
             self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None
+            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
     def add_smoothing_branch(self):
         if self.output_dim<=self.max_size:
             k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio)
             self.will_be_next_layers=self.layer_list+[deconv(self.c_in,self.c_out,k_size)]
+            self.optimizer=torch.optim.Adam(make_model(self.will_be_next_layers).parameters(), lr=learning_rate)            
         else:
             print ("MAX SIZE REACHED")
             
@@ -176,6 +178,7 @@ class Discriminator(nn.Module):
             self.model=self.make_model(self.will_be_next_layers)
             self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None 
+            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
 
 
@@ -189,6 +192,7 @@ class Discriminator(nn.Module):
             self.output_dim=self.input_dim
             self.input_dim=int(self.output_dim*(1/self.size_step_ratio))
             self.resize_data()
+            self.optimizer=torch.optim.Adam(make_model(self.will_be_next_layers).parameters(), lr=learning_rate)
         else:
             print ("MAX SIZE REACHED")
 
@@ -221,7 +225,7 @@ class Discriminator(nn.Module):
 
 class PGGAN(object):
     """docstring for PGGAN"""
-    def __init__(self, least_size,max_size,size_step_ratio):
+    def __init__(self, least_size=2,max_size=16,size_step_ratio=2):
         super(PGGAN, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
@@ -229,11 +233,64 @@ class PGGAN(object):
         self.G=Generator(least_size,max_size,size_step_ratio)
         self.D=Discriminator(least_size,max_size,1/size_step_ratio)
 
-    def train(self,num_of_epochs,batch_size,G_data_loader,D_data_loader):
-        for epoch in num_of_epochs:
-            for batch_no,(G_data,D_data) in enumerate(zip(G_data_loader,D_data_loader)):
-                G_input_images=G_data[0]
-        
+    def reset_grad(self):
+        """Zero the gradient buffers."""
+        self.D.zero_grad()
+        self.G.zero_grad()
+
+    def train(self,num_of_epochs=1):
+        smoothing_on=False
+        for epoch in range(num_of_epochs):
+            for batch_no,(G_data,D_data) in enumerate(zip(self.G.data_loader,self.D.data_loader)):
+                
+                #load data
+                G_data=Variable(G_data)        
+                D_data=Variable(D_data[0])
+                # calculate _loss
+                if smoothing_on:
+                    outputs=self.D(D_data,with_smoothing=True)
+                    real_loss=torch.mean((outputs-1)**2)
+                    outputs=self.G(G_data,with_smoothing=True)
+                    fake_loss=torch.mean((self.D(outputs)-1)**2)                   
+                else:
+                    outputs=self.D(D_data)
+                    real_loss=torch.mean((outputs-1)**2)
+                    outputs=self.G(G_data)
+                    fake_loss=torch.mean((self.D(outputs)-1)**2)
+                # Backprop + optimize
+                d_loss = real_loss + fake_loss
+                self.reset_grad()
+                print ("~")
+                d_loss.backward()
+                print ("~")
+                
+                self.D.optimizer.step()
+                # Train G so that D recognizes G(z) as real.
+                print ("~")
+                
+                g_loss = fake_loss
+                self.reset_grad()
+                print ("~")
+                g_loss.backward()
+                self.G.optimizer.step()
+                print ("~")
+
+                #update weights
+
+            if smoothing_on:
+                self.G.smoothing_factor+=0.2
+                self.D.smoothing_factor+=0.2
+            if epoch%10==0 and epoch!=0:
+                self.G.add_layer()
+                self.D.add_layer()
+                smoothing_on=False
+            elif epoch%5:
+                self.G.add_smoothing_branch()
+                self.D.add_smoothing_branch()
+                smoothing_on=True
+
+
+
 
 
 
