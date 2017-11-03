@@ -47,10 +47,9 @@ from Network import Generator,Discriminator,PGGAN
 #     print("##########################################")
 #     print (d(g(Variable(i),with_smoothing=True),with_smoothing=True).size())
 #     print("##########################################")
-#     break
 
 
-# print (d(g(y)))
+# # print (d(g(y)))
 
 import torch 
 import torch.nn as nn

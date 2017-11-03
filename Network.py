@@ -212,14 +212,12 @@ class Discriminator(nn.Module):
             A_to_supply=np.tile(A1,(1,int(self.c_out/2),1,1))            
             A=(1-self.smoothing_factor)*self.model(Variable(torch.Tensor(A_to_supply)))
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(Variable(torch.Tensor(input_to_supply)))
-            print (A.size())
             A=sum(A,[0,1],keepdim=True)
             B=sum(B,[0,1],keepdim=True)
             return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
         else:
             input1=input.data.numpy()
             input_to_supply=np.tile(input1,(1,self.c_out,1,1))
-            print (input_to_supply.shape)
             A=self.model(Variable(torch.Tensor(input_to_supply)))
             return A
 
@@ -243,7 +241,6 @@ class PGGAN(object):
         for epoch in range(num_of_epochs):
             for batch_no,(G_data,D_data) in enumerate(zip(self.G.data_loader,self.D.data_loader)):
                 
-                #load data
                 G_data=Variable(G_data)        
                 D_data=Variable(D_data[0])
                 # calculate _loss
@@ -260,20 +257,15 @@ class PGGAN(object):
                 # Backprop + optimize
                 d_loss = real_loss + fake_loss
                 self.reset_grad()
-                print ("~")
                 d_loss.backward()
-                print ("~")
                 
                 self.D.optimizer.step()
                 # Train G so that D recognizes G(z) as real.
-                print ("~")
                 
                 g_loss = fake_loss
                 self.reset_grad()
-                print ("~")
                 g_loss.backward()
                 self.G.optimizer.step()
-                print ("~")
 
                 #update weights
 
