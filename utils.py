@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as nu
+import torch.utils.data as d
 def deconv(c_in, c_out, k_size, stride=1, pad=0, bn=True):
     """Custom deconvolutional layer for simplicity."""
     layers = []
@@ -46,3 +47,16 @@ def sum(input, axes, keepdim=False):
             input = input.sum(ax)
     return input
 
+class Noise(d.Dataset):
+    """docstring for Noise"""
+    def __init__(self, length,dimension):
+        super(Noise, self).__init__()
+        self.length = length
+        self.data=torch.FloatTensor(*[self.length,1,dimension,dimension]).normal_(0,1)
+    def __getitem__(self,idx):
+        return self.data[idx]
+
+    def __len__(self):
+        return self.length
+
+        

@@ -4,10 +4,16 @@ import torch.nn.functional as F
 from utils import *
 import numpy as np
 from torch.autograd import Variable
+import torch 
+import torch.nn as nn
+import torchvision.datasets as dsets
+import torchvision.transforms as transforms
+from torch.autograd import Variable
+
 class Generator(nn.Module):
     """docstring for Generator"""
     
-    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1):
+    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=32):
         super(Generator, self).__init__()
         self.least_size = least_size
         self.max_size=max_size
@@ -21,7 +27,15 @@ class Generator(nn.Module):
         self.model=self.make_model(self.layer_list)
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.smoothing_factor=0.2
+        self.batch_size=batch_size
         self.will_be_next_layers=None
+        self.init_data()
+
+    def init_data(self):
+        train_dataset=Noise(60000,self.least_size)
+        self.data_loader=torch.utils.data.DataLoader(dataset=train_dataset,
+                                           batch_size=self.batch_size, 
+                                           shuffle=True)
 
     def make_model(self,layers_list):
         model=nn.Sequential(*layers_list)
@@ -85,17 +99,17 @@ class Generator(nn.Module):
             B=sum(B,[0,1],keepdim=True)
             return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
         else:
-            A=sum(self.model(input),[0,1],keepdim=True)
+            A=sum(self.model(input),[1],keepdim=True)
             return A
         
 class Discriminator(nn.Module):
     """docstring for Discriminator"""
-    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1):
+    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=32):
         super(Discriminator, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
         self.max_size = max_size
-        self.input_dim=4
+        self.input_dim=int(self.least_size*(1/size_step_ratio))
         self.curr_least_size=int(self.input_dim*self.size_step_ratio)
         self.output_dim=int(self.input_dim*self.size_step_ratio)
         self.least_size=self.least_size
@@ -106,8 +120,29 @@ class Discriminator(nn.Module):
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.will_be_next_layers=None
         self.smoothing_factor=0.2
+        self.batch_size=batch_size
+        self.init_data()
 
-        
+    def init_data(self):
+        t=transforms.Compose([transforms.Scale(self.input_dim),transforms.ToTensor()])
+        train_dataset = dsets.MNIST(root='./data/',
+                            train=True, 
+                            transform=t,
+                            download=True)
+        self.data_loader=torch.utils.data.DataLoader(dataset=train_dataset,
+                                           batch_size=self.batch_size, 
+                                           shuffle=True)
+
+    def resize_data(self):
+        t=transforms.Compose([transforms.Scale(self.output_dim),transforms.ToTensor()])
+        train_dataset = dsets.MNIST(root='./data/',
+                            train=True, 
+                            transform=t,
+                            download=True)
+        self.data_loader=torch.utils.data.DataLoader(dataset=train_dataset,
+                                           batch_size=self.batch_size, 
+                                           shuffle=True)        
+
     def make_model(self,layers_list):
         model=nn.Sequential(*layers_list)
         return model
@@ -141,8 +176,7 @@ class Discriminator(nn.Module):
             self.model=self.make_model(self.will_be_next_layers)
             self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None 
-            self.output_dim=self.input_dim
-            self.input_dim=int(self.output_dim*(1/self.size_step_ratio))
+
 
 
 
@@ -152,6 +186,9 @@ class Discriminator(nn.Module):
             self.will_be_next_layers=[conv(self.c_in,self.c_out,k_size)]+self.layer_list
             self.c_out=self.c_in
             self.c_in=self.c_out*2
+            self.output_dim=self.input_dim
+            self.input_dim=int(self.output_dim*(1/self.size_step_ratio))
+            self.resize_data()
         else:
             print ("MAX SIZE REACHED")
 
@@ -190,10 +227,13 @@ class PGGAN(object):
         self.size_step_ratio = size_step_ratio
         self.max_size = max_size
         self.G=Generator(least_size,max_size,size_step_ratio)
-        self.D=Discriminator(least_size,max_size,size_step_ratio)
+        self.D=Discriminator(least_size,max_size,1/size_step_ratio)
 
-    def train(self,num_of_epochs,batch_size):
-        pass
+    def train(self,num_of_epochs,batch_size,G_data_loader,D_data_loader):
+        for epoch in num_of_epochs:
+            for batch_no,(G_data,D_data) in enumerate(zip(G_data_loader,D_data_loader)):
+                G_input_images=G_data[0]
+        
 
 
 
