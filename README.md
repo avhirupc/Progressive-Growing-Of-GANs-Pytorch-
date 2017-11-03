@@ -8,6 +8,6 @@ The following experiment will been carried out on MNIST dataset.
 - [x] Classes for Generator,Discriminator and PGGAN
 - [x] add_layer functions
 - [x] adding smoothing  branch
-- [ ] **Training** procedure.
-- [ ] Data Loader and Transforming them for training.
+- [x] **Training** procedure.
+- [x] Data Loader and Transforming them for training.
 - [ ] Training it on MNIST data and uploading trained model
