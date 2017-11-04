@@ -13,7 +13,7 @@ from torch.autograd import Variable
 class Generator(nn.Module):
     """docstring for Generator"""
     
-    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=32):
+    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=100):
         super(Generator, self).__init__()
         self.least_size = least_size
         self.max_size=max_size
@@ -107,7 +107,7 @@ class Generator(nn.Module):
         
 class Discriminator(nn.Module):
     """docstring for Discriminator"""
-    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=32):
+    def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=100):
         super(Discriminator, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
@@ -228,13 +228,13 @@ class Discriminator(nn.Module):
 
 class PGGAN(object):
     """docstring for PGGAN"""
-    def __init__(self, least_size=2,max_size=16,size_step_ratio=2):
+    def __init__(self, least_size=2,max_size=16,size_step_ratio=2,learning_rate=0.001,batch_size=100):
         super(PGGAN, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
         self.max_size = max_size
-        self.G=Generator(least_size,max_size,size_step_ratio)
-        self.D=Discriminator(least_size,max_size,1/size_step_ratio)
+        self.G=Generator(least_size,max_size,size_step_ratio,learning_rate=learning_rate,batch_size=batch_size)
+        self.D=Discriminator(least_size,max_size,1/size_step_ratio,learning_rate=learning_rate,batch_size=batch_size)
 
     def reset_grad(self):
         """Zero the gradient buffers."""
@@ -257,12 +257,12 @@ class PGGAN(object):
                     outputs=self.D(D_data,with_smoothing=True)
                     real_loss=torch.mean((outputs-1)**2)
                     outputs=self.G(G_data,with_smoothing=True)
-                    fake_loss=torch.mean((self.D(outputs)-1)**2)                   
+                    fake_loss=torch.mean(self.D(outputs)**2)                   
                 else:
                     outputs=self.D(D_data)
                     real_loss=torch.mean((outputs-1)**2)
                     outputs=self.G(G_data)
-                    fake_loss=torch.mean((self.D(outputs)-1)**2)
+                    fake_loss=torch.mean(self.D(outputs)**2)
                 # Backprop + optimize
                 d_loss = real_loss + fake_loss
                 avg_d_loss+=d_loss.data
@@ -270,6 +270,12 @@ class PGGAN(object):
                 #update weights
                 self.D.optimizer.step()
                 
+                if smoothing_on:
+                    outputs=self.G(G_data,with_smoothing=True)
+                    fake_loss=torch.mean((self.D(outputs)-1)**2)                   
+                else:
+                    outputs=self.G(G_data)
+                    fake_loss=torch.mean((self.D(outputs)-1)**2)
                 # Train G so that D recognizes G(z) as real.
                 
                 g_loss = fake_loss
@@ -279,8 +285,19 @@ class PGGAN(object):
                 self.G.optimizer.step()
                 if batch_no%100==0:
                     print ("Batch ",batch_no,"||d_loss",d_loss.data,"||g_loss",g_loss.data)
+            print ("epoch",epoch)
+            #dump image
+            x=np.random.rand(1,1,2,2)
+            x=Variable(torch.Tensor(x))
+            image=self.G(x)
+            image_array=image.data.numpy()
+            print (type(image_array),image_array.reshape((4,4)))
+            from PIL import Image
 
-
+            im = Image.fromarray(image_array.reshape((4,4))*255)
+            if im.mode != 'RGB':
+                im = im.convert('RGB')
+            im.save("your_file.png")
             print ("Avg G Loss",avg_g_loss,"Avg D Loss", avg_d_loss)
             if smoothing_on:
                 self.G.smoothing_factor+=0.2
@@ -289,7 +306,7 @@ class PGGAN(object):
                 self.G.add_layer()
                 self.D.add_layer()
                 smoothing_on=False
-            elif epoch%5:
+            elif epoch%5==0 and epoch!=0:
                 self.G.add_smoothing_branch()
                 self.D.add_smoothing_branch()
                 smoothing_on=True
