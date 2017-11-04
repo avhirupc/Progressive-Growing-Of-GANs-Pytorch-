@@ -30,6 +30,7 @@ class Generator(nn.Module):
         self.batch_size=batch_size
         self.will_be_next_layers=None
         self.init_data()
+        self.learning_rate=learning_rate
 
     def init_data(self):
         train_dataset=Noise(60000,self.least_size)
@@ -79,13 +80,13 @@ class Generator(nn.Module):
             self.model=self.make_model(self.will_be_next_layers)
             self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None
-            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def add_smoothing_branch(self):
         if self.output_dim<=self.max_size:
             k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio)
             self.will_be_next_layers=self.layer_list+[deconv(self.c_in,self.c_out,k_size)]
-            self.optimizer=torch.optim.Adam(make_model(self.will_be_next_layers).parameters(), lr=learning_rate)            
+            self.optimizer=torch.optim.Adam(self.make_model(self.will_be_next_layers).parameters(), lr=self.learning_rate)            
         else:
             print ("MAX SIZE REACHED")
             
@@ -124,6 +125,7 @@ class Discriminator(nn.Module):
         self.smoothing_factor=0.2
         self.batch_size=batch_size
         self.init_data()
+        self.learning_rate=learning_rate
 
     def init_data(self):
         t=transforms.Compose([transforms.Scale(self.input_dim),transforms.ToTensor()])
@@ -178,7 +180,7 @@ class Discriminator(nn.Module):
             self.model=self.make_model(self.will_be_next_layers)
             self.layer_list=self.will_be_next_layers
             self.will_be_next_layers=None 
-            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+            self.optimizer=torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
 
 
@@ -192,7 +194,7 @@ class Discriminator(nn.Module):
             self.output_dim=self.input_dim
             self.input_dim=int(self.output_dim*(1/self.size_step_ratio))
             self.resize_data()
-            self.optimizer=torch.optim.Adam(make_model(self.will_be_next_layers).parameters(), lr=learning_rate)
+            self.optimizer=torch.optim.Adam(self.make_model(self.will_be_next_layers).parameters(), lr=self.learning_rate)
         else:
             print ("MAX SIZE REACHED")
 
@@ -202,23 +204,26 @@ class Discriminator(nn.Module):
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
                 return
-            input1=input.data.numpy()
-            input_to_supply=np.tile(input1,(1,self.c_out,1,1))
+            input1=input.clone()
+            input_to_supply=input1.repeat(*[1,self.c_out,1,1])
+            # input_to_supply=np.tile(input1,(1,self.c_out,1,1))
             # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
             k_size=2
             avg_pool=nn.AvgPool2d(2,stride=0)
             A=avg_pool(input)
-            A1=A.data.numpy()
-            A_to_supply=np.tile(A1,(1,int(self.c_out/2),1,1))            
-            A=(1-self.smoothing_factor)*self.model(Variable(torch.Tensor(A_to_supply)))
-            B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(Variable(torch.Tensor(input_to_supply)))
+            # A1=A.data.numpy()
+            # A_to_supply=np.tile(A1,(1,int(self.c_out/2),1,1))
+            A_to_supply=A.repeat(*[1,int(self.c_out/2),1,1])            
+            A=(1-self.smoothing_factor)*self.model(A_to_supply)
+            # B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(Variable(torch.Tensor(input_to_supply)))
+            B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input_to_supply)
             A=sum(A,[0,1],keepdim=True)
             B=sum(B,[0,1],keepdim=True)
             return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
         else:
-            input1=input.data.numpy()
-            input_to_supply=np.tile(input1,(1,self.c_out,1,1))
-            A=self.model(Variable(torch.Tensor(input_to_supply)))
+            input1=input.clone()
+            input_to_supply=input1.repeat(*[1,self.c_out,1,1])
+            A=self.model(input_to_supply)
             return A
 
 class PGGAN(object):
@@ -256,15 +261,15 @@ class PGGAN(object):
                     fake_loss=torch.mean((self.D(outputs)-1)**2)
                 # Backprop + optimize
                 d_loss = real_loss + fake_loss
-                self.reset_grad()
-                d_loss.backward()
-                
+                # self.reset_grad()
+                d_loss.backward(retain_graph=True)
                 self.D.optimizer.step()
+                
                 # Train G so that D recognizes G(z) as real.
                 
                 g_loss = fake_loss
-                self.reset_grad()
-                g_loss.backward()
+                # self.reset_grad()
+                g_loss.backward(retain_graph=True)
                 self.G.optimizer.step()
 
                 #update weights
