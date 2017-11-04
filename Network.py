@@ -241,10 +241,14 @@ class PGGAN(object):
         self.D.zero_grad()
         self.G.zero_grad()
 
-    def train(self,num_of_epochs=1):
+    def train(self,num_of_epochs=10):
         smoothing_on=False
         for epoch in range(num_of_epochs):
+            avg_d_loss=0
+            avg_g_loss=0
+
             for batch_no,(G_data,D_data) in enumerate(zip(self.G.data_loader,self.D.data_loader)):
+                self.reset_grad()
                 
                 G_data=Variable(G_data)        
                 D_data=Variable(D_data[0])
@@ -261,19 +265,23 @@ class PGGAN(object):
                     fake_loss=torch.mean((self.D(outputs)-1)**2)
                 # Backprop + optimize
                 d_loss = real_loss + fake_loss
-                # self.reset_grad()
+                avg_d_loss+=d_loss.data
                 d_loss.backward(retain_graph=True)
+                #update weights
                 self.D.optimizer.step()
                 
                 # Train G so that D recognizes G(z) as real.
                 
                 g_loss = fake_loss
-                # self.reset_grad()
+                avg_g_loss+=g_loss.data
                 g_loss.backward(retain_graph=True)
-                self.G.optimizer.step()
-
                 #update weights
+                self.G.optimizer.step()
+                if batch_no%100==0:
+                    print ("Batch ",batch_no,"||d_loss",d_loss.data,"||g_loss",g_loss.data)
 
+
+            print ("Avg G Loss",avg_g_loss,"Avg D Loss", avg_d_loss)
             if smoothing_on:
                 self.G.smoothing_factor+=0.2
                 self.D.smoothing_factor+=0.2
