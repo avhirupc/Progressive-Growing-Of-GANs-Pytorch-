@@ -96,17 +96,13 @@ class Generator(nn.Module):
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
                 return
-            print (input.size())
             A=F.upsample((1-self.smoothing_factor)*self.model(input),scale_factor=self.size_step_ratio)
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
-            print ('IN G',A.size())
             # A=sum(A,[0,1],keepdim=True)
             A=sum(A,[1],keepdim=True)
-            print (A.size())
             # B=sum(B,[0,1],keepdim=True)
             B=sum(B,[1],keepdim=True)
             C=(1-self.smoothing_factor)*A + self.smoothing_factor*B 
-            print (C.size())
             return C
         else:
             A=sum(self.model(input),[1],keepdim=True)
@@ -226,10 +222,8 @@ class Discriminator(nn.Module):
             A=(1-self.smoothing_factor)*self.model(A_to_supply)
             
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input_to_supply)
-            print ("In D")
             # A=sum(A,[1],keepdim=True)
             # B=sum(B,[1],keepdim=True)
-            print ((A+B).size())
             return A + B 
         else:
             input1=input.clone()
