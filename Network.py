@@ -233,7 +233,7 @@ class Discriminator(nn.Module):
 
 class PGGAN(object):
     """docstring for PGGAN"""
-    def __init__(self, least_size=2,max_size=16,size_step_ratio=2,learning_rate=0.001,batch_size=100):
+    def __init__(self, least_size=2,max_size=16,size_step_ratio=2,learning_rate=0.01,batch_size=100):
         super(PGGAN, self).__init__()
         self.least_size = least_size
         self.size_step_ratio = size_step_ratio
@@ -246,7 +246,7 @@ class PGGAN(object):
         self.D.zero_grad()
         self.G.zero_grad()
 
-    def train(self,num_of_epochs=10):
+    def train(self,num_of_epochs=100):
         smoothing_on=False
         for epoch in range(num_of_epochs):
             avg_d_loss=0
@@ -265,7 +265,11 @@ class PGGAN(object):
                     outputs=self.G(G_data,with_smoothing=True)
                     fake_loss=torch.mean(self.D(outputs,with_smoothing=True)**2)                   
                 else:
-                    outputs=self.D(D_data)
+                    try:
+                        outputs=self.D(D_data)
+                    except:
+                        print (D_data.size())
+                        1/0
                     real_loss=torch.mean((outputs-1)**2)
                     outputs=self.G(G_data)
                     fake_loss=torch.mean(self.D(outputs)**2)
@@ -297,24 +301,25 @@ class PGGAN(object):
             x=Variable(torch.Tensor(x))
             image=self.G(x)
             image_array=image.data.numpy()
-            print (type(image_array),image_array.reshape((4,4)))
+            print (image_array.shape)
+            print (type(image_array),image_array.reshape((image_array.shape[2],image_array.shape[3])))
             from PIL import Image
 
-            im = Image.fromarray(image_array.reshape((4,4))*255)
+            im = Image.fromarray(image_array.reshape((image_array.shape[2],image_array.shape[3]))*255)
             if im.mode != 'RGB':
                 im = im.convert('RGB')
             im.save("your_file.png")
             print ("Avg G Loss",avg_g_loss,"Avg D Loss", avg_d_loss)
             if smoothing_on:
-                self.G.smoothing_factor+=0.2
-                self.D.smoothing_factor+=0.2
-            if epoch%4==0 and epoch!=0:
-                self.G.add_layer()
-                self.D.add_layer()
+                self.G.smoothing_factor+=0.1
+                self.D.smoothing_factor+=0.1
+            if epoch%20==0 and epoch!=0:
+                self.G.add_layer(with_smoothing=True)
+                self.D.add_layer(with_smoothing=True)
                 self.G.smoothing_factor=0.2
                 self.D.smoothing_factor=0.2
                 smoothing_on=False
-            elif epoch%2==0 and epoch!=0:
+            elif epoch%10==0 and epoch!=0:
                 self.G.add_smoothing_branch()
                 self.D.add_smoothing_branch()
                 smoothing_on=True
