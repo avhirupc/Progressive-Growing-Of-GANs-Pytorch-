@@ -100,7 +100,9 @@ class Generator(nn.Module):
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
             A=sum(A,[0,1],keepdim=True)
             B=sum(B,[0,1],keepdim=True)
-            return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
+            C=(1-self.smoothing_factor)*A + self.smoothing_factor*B 
+            print (C.size())
+            return C
         else:
             A=sum(self.model(input),[1],keepdim=True)
             return A
@@ -206,20 +208,22 @@ class Discriminator(nn.Module):
                 return
             input1=input.clone()
             input_to_supply=input1.repeat(*[1,self.c_out,1,1])
+
             # input_to_supply=np.tile(input1,(1,self.c_out,1,1))
             # k_size=calculate_avgpool_kernel_size(self.input_dim,self.size_step_ratio)
             k_size=2
             avg_pool=nn.AvgPool2d(2,stride=0)
             A=avg_pool(input)
+
             # A1=A.data.numpy()
             # A_to_supply=np.tile(A1,(1,int(self.c_out/2),1,1))
-            A_to_supply=A.repeat(*[1,int(self.c_out/2),1,1])            
+            A_to_supply=A.repeat(*[1,int(self.c_out/2),1,1])
             A=(1-self.smoothing_factor)*self.model(A_to_supply)
-            # B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(Variable(torch.Tensor(input_to_supply)))
+            
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input_to_supply)
             A=sum(A,[0,1],keepdim=True)
             B=sum(B,[0,1],keepdim=True)
-            return (1-self.smoothing_factor)*A + self.smoothing_factor*B 
+            return A + B 
         else:
             input1=input.clone()
             input_to_supply=input1.repeat(*[1,self.c_out,1,1])
@@ -257,7 +261,7 @@ class PGGAN(object):
                     outputs=self.D(D_data,with_smoothing=True)
                     real_loss=torch.mean((outputs-1)**2)
                     outputs=self.G(G_data,with_smoothing=True)
-                    fake_loss=torch.mean(self.D(outputs)**2)                   
+                    fake_loss=torch.mean(self.D(outputs,with_smoothing=True)**2)                   
                 else:
                     outputs=self.D(D_data)
                     real_loss=torch.mean((outputs-1)**2)
@@ -272,7 +276,7 @@ class PGGAN(object):
                 
                 if smoothing_on:
                     outputs=self.G(G_data,with_smoothing=True)
-                    fake_loss=torch.mean((self.D(outputs)-1)**2)                   
+                    fake_loss=torch.mean((self.D(outputs,with_smoothing=True)-1)**2)                   
                 else:
                     outputs=self.G(G_data)
                     fake_loss=torch.mean((self.D(outputs)-1)**2)
@@ -305,11 +309,17 @@ class PGGAN(object):
             if epoch%10==0 and epoch!=0:
                 self.G.add_layer()
                 self.D.add_layer()
+                self.G.smoothing_factor=0.2
+                self.D.smoothing_factor=0.2
                 smoothing_on=False
             elif epoch%5==0 and epoch!=0:
                 self.G.add_smoothing_branch()
                 self.D.add_smoothing_branch()
                 smoothing_on=True
+                print( self.G,self.D )
+
+                print (self.G.will_be_next_layers,self.D.will_be_next_layers)
+
 
 
 
