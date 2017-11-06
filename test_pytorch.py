@@ -3,9 +3,13 @@ import torch.nn as nn
 import numpy as np
 from torch.autograd import Variable
 import torch.nn.functional as F
-
-# x=np.random.rand(1,1,2,2)
+from utils import *
+# x=np.random.rand(100,1,2,2)
 # x=torch.Tensor(x)
+
+# y=sum(x,[2,3],keepdim=True)
+# print (y.size())
+
 
 # y=x.repeat(*[1,3,1,1])
 

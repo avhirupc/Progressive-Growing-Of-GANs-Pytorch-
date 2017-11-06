@@ -96,10 +96,15 @@ class Generator(nn.Module):
             if self.will_be_next_layers==None:
                 print ("call add_smoothing_branch and run for few epochs and then call add_layer with Smoothing")
                 return
+            print (input.size())
             A=F.upsample((1-self.smoothing_factor)*self.model(input),scale_factor=self.size_step_ratio)
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input)
-            A=sum(A,[0,1],keepdim=True)
-            B=sum(B,[0,1],keepdim=True)
+            print ('IN G',A.size())
+            # A=sum(A,[0,1],keepdim=True)
+            A=sum(A,[1],keepdim=True)
+            print (A.size())
+            # B=sum(B,[0,1],keepdim=True)
+            B=sum(B,[1],keepdim=True)
             C=(1-self.smoothing_factor)*A + self.smoothing_factor*B 
             print (C.size())
             return C
@@ -118,6 +123,8 @@ class Discriminator(nn.Module):
         self.curr_least_size=int(self.input_dim*self.size_step_ratio)
         self.output_dim=int(self.input_dim*self.size_step_ratio)
         self.least_size=self.least_size
+        self.batch_size=batch_size
+        self.init_data()
         self.c_in=2
         self.c_out=1
         self.layer_list=self.init_layers()
@@ -125,8 +132,6 @@ class Discriminator(nn.Module):
         self.optimizer=torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.will_be_next_layers=None
         self.smoothing_factor=0.2
-        self.batch_size=batch_size
-        self.init_data()
         self.learning_rate=learning_rate
 
     def init_data(self):
@@ -221,8 +226,10 @@ class Discriminator(nn.Module):
             A=(1-self.smoothing_factor)*self.model(A_to_supply)
             
             B=self.smoothing_factor*self.make_model(self.will_be_next_layers)(input_to_supply)
-            A=sum(A,[0,1],keepdim=True)
-            B=sum(B,[0,1],keepdim=True)
+            print ("In D")
+            # A=sum(A,[1],keepdim=True)
+            # B=sum(B,[1],keepdim=True)
+            print ((A+B).size())
             return A + B 
         else:
             input1=input.clone()
@@ -256,6 +263,7 @@ class PGGAN(object):
                 
                 G_data=Variable(G_data)        
                 D_data=Variable(D_data[0])
+                #resizing d_data to fit currently
                 # calculate _loss
                 if smoothing_on:
                     outputs=self.D(D_data,with_smoothing=True)
@@ -306,19 +314,16 @@ class PGGAN(object):
             if smoothing_on:
                 self.G.smoothing_factor+=0.2
                 self.D.smoothing_factor+=0.2
-            if epoch%10==0 and epoch!=0:
+            if epoch%4==0 and epoch!=0:
                 self.G.add_layer()
                 self.D.add_layer()
                 self.G.smoothing_factor=0.2
                 self.D.smoothing_factor=0.2
                 smoothing_on=False
-            elif epoch%5==0 and epoch!=0:
+            elif epoch%2==0 and epoch!=0:
                 self.G.add_smoothing_branch()
                 self.D.add_smoothing_branch()
                 smoothing_on=True
-                print( self.G,self.D )
-
-                print (self.G.will_be_next_layers,self.D.will_be_next_layers)
 
 
 
