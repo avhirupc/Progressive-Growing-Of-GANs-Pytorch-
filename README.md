@@ -11,3 +11,5 @@ The following experiment will been carried out on MNIST dataset.
 - [x] **Training** procedure.
 - [x] Data Loader and Transforming them for training.
 - [ ] Training it on MNIST data and uploading trained model
+- [ ] minibatch discrimination
+- [ ] weight normalisation

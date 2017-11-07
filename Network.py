@@ -11,7 +11,15 @@ import torchvision.transforms as transforms
 from torch.autograd import Variable
 
 class Generator(nn.Module):
-    """docstring for Generator"""
+    """Generator:
+        Input : Noise of dimension least_size*least_size
+        Ouput : Single channel B/W Image of current output dimension
+
+        Parameters:
+            least_size : minimum size you want to start with 
+            max_size : maximum size of output after training
+            size_step_ratio : ratio with which you want to increase output after each layer"""
+
     
     def __init__(self,least_size,max_size,size_step_ratio,learning_rate=0.1,batch_size=100):
         super(Generator, self).__init__()
@@ -33,6 +41,7 @@ class Generator(nn.Module):
         self.learning_rate=learning_rate
 
     def init_data(self):
+        """Initialises data_loader"""
         train_dataset=Noise(60000,self.least_size)
         self.data_loader=torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=self.batch_size, 
@@ -58,6 +67,7 @@ class Generator(nn.Module):
         return l_of_layer
 
     def add_layer(self,with_smoothing=False):
+        """Adds layer to Generator"""
         if not with_smoothing:
             if self.output_dim<=self.max_size:
                 k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio) 
@@ -83,6 +93,7 @@ class Generator(nn.Module):
             self.optimizer=torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def add_smoothing_branch(self):
+        """Adds smooothing branch with over time turns to new model"""
         if self.output_dim<=self.max_size:
             k_size=calculate_deconv_kernel_size(self.input_dim,self.size_step_ratio)
             self.will_be_next_layers=self.layer_list+[deconv(self.c_in,self.c_out,k_size)]
@@ -131,6 +142,7 @@ class Discriminator(nn.Module):
         self.learning_rate=learning_rate
 
     def init_data(self):
+        """Initialises data_loader"""
         t=transforms.Compose([transforms.Scale(self.input_dim),transforms.ToTensor()])
         train_dataset = dsets.MNIST(root='./data/',
                             train=True, 
@@ -141,6 +153,7 @@ class Discriminator(nn.Module):
                                            shuffle=True)
 
     def resize_data(self):
+        """Changes data_loader"""
         t=transforms.Compose([transforms.Scale(self.output_dim),transforms.ToTensor()])
         train_dataset = dsets.MNIST(root='./data/',
                             train=True, 
@@ -305,7 +318,7 @@ class PGGAN(object):
             print (type(image_array),image_array.reshape((image_array.shape[2],image_array.shape[3])))
             from PIL import Image
 
-            im = Image.fromarray(image_array.reshape((image_array.shape[2],image_array.shape[3]))*255)
+            im = Image.fromarray(image_array.reshape((image_array.shape[2],image_array.shape[3])))
             if im.mode != 'RGB':
                 im = im.convert('RGB')
             im.save("your_file.png")
