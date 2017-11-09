@@ -9,6 +9,7 @@ import torch.nn as nn
 import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 from torch.autograd import Variable
+from PIL import Image
 
 class Generator(nn.Module):
     """Generator:
@@ -306,16 +307,7 @@ class PGGAN(object):
                     print ("Batch ",batch_no,"||d_loss",d_loss.data,"||g_loss",g_loss.data)
             print ("epoch",epoch)
             #dump image
-            x=np.random.rand(1,1,2,2)
-            x=Variable(torch.Tensor(x))
-            image=self.G(x)
-            image_array=image.data.numpy()
-            image_array=image_array.reshape((image_array.shape[2],image_array.shape[3]))
-            from PIL import Image
-            im = Image.fromarray(image_array*255)
-            if im.mode != 'RGB':
-                im = im.convert('RGB')
-            im.save(str(epoch)+"_gout.png")
+            self.store_output(epoch)
             print ("Avg G Loss",avg_g_loss,"Avg D Loss", avg_d_loss)
             if smoothing_on:
                 self.G.smoothing_factor+=0.1
@@ -332,7 +324,16 @@ class PGGAN(object):
                 smoothing_on=True
 
 
-
+    def store_output(self,epoch):
+        x=np.random.rand(1,1,2,2)
+        x=Variable(torch.Tensor(x))
+        image=self.G(x)
+        image_array=image.data.numpy()
+        image_array=image_array.reshape((image_array.shape[2],image_array.shape[3]))
+        im = Image.fromarray(image_array*255)
+        if im.mode != 'RGB':
+            im = im.convert('RGB')
+        im.save('Generator_Outputs/'+str(epoch)+"_gout.png")
 
 
 

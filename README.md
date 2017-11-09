@@ -10,6 +10,6 @@ The following experiment will been carried out on MNIST dataset.
 - [x] adding smoothing  branch
 - [x] **Training** procedure.
 - [x] Data Loader and Transforming them for training.
-- [ ] Training it on MNIST data and uploading trained model
+- [x] Training it on MNIST data and uploading trained model
 - [ ] minibatch discrimination
 - [ ] weight normalisation
