@@ -278,11 +278,7 @@ class PGGAN(object):
                     outputs=self.G(G_data,with_smoothing=True)
                     fake_loss=torch.mean(self.D(outputs,with_smoothing=True)**2)                   
                 else:
-                    try:
-                        outputs=self.D(D_data)
-                    except:
-                        print (D_data.size())
-                        1/0
+                    outputs=self.D(D_data)
                     real_loss=torch.mean((outputs-1)**2)
                     outputs=self.G(G_data)
                     fake_loss=torch.mean(self.D(outputs)**2)
@@ -314,14 +310,12 @@ class PGGAN(object):
             x=Variable(torch.Tensor(x))
             image=self.G(x)
             image_array=image.data.numpy()
-            print (image_array.shape)
-            print (type(image_array),image_array.reshape((image_array.shape[2],image_array.shape[3])))
+            image_array=image_array.reshape((image_array.shape[2],image_array.shape[3]))
             from PIL import Image
-
-            im = Image.fromarray(image_array.reshape((image_array.shape[2],image_array.shape[3])))
+            im = Image.fromarray(image_array*255)
             if im.mode != 'RGB':
                 im = im.convert('RGB')
-            im.save("your_file.png")
+            im.save(str(epoch)+"_gout.png")
             print ("Avg G Loss",avg_g_loss,"Avg D Loss", avg_d_loss)
             if smoothing_on:
                 self.G.smoothing_factor+=0.1
