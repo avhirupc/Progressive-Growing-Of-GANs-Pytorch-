@@ -114,10 +114,10 @@ class Generator(nn.Module):
             # B=sum(B,[0,1],keepdim=True)
             B=sum(B,[1],keepdim=True)
             C=(1-self.smoothing_factor)*A + self.smoothing_factor*B 
-            return C
+            return C.clamp(0,1)
         else:
             A=sum(self.model(input),[1],keepdim=True)
-            return A
+            return A.clamp(0,1)
         
 class Discriminator(nn.Module):
     """docstring for Discriminator"""
